@@ -1,0 +1,177 @@
+<main class="page">
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Fraud Detection MVP</p>
+      <h1>Fraud Detection Dashboard</h1>
+      <p>Monitoramento do pipeline Bronze, Silver e Gold com Kafka, Python IA e Spring Boot.</p>
+    </div>
+
+    <div class="actions">
+      <span class="status">{{ status }}</span>
+      <button type="button" (click)="refresh()">Atualizar</button>
+    </div>
+  </section>
+
+  <section *ngIf="summary as data" class="content">
+    <div class="cards">
+      <article class="card bronze">
+        <span>Bronze</span>
+        <strong>{{ data.totalBronze }}</strong>
+        <small>Dados brutos</small>
+      </article>
+
+      <article class="card silver">
+        <span>Silver</span>
+        <strong>{{ data.totalSilver }}</strong>
+        <small>Dados tratados</small>
+      </article>
+
+      <article class="card gold">
+        <span>Gold</span>
+        <strong>{{ data.totalGold }}</strong>
+        <small>Resultados IA</small>
+      </article>
+
+      <article class="card rejected">
+        <span>Rejected</span>
+        <strong>{{ data.totalRejected }}</strong>
+        <small>Registros rejeitados</small>
+      </article>
+    </div>
+
+    <div class="panels">
+      <article class="panel wide">
+        <div class="panel-header">
+          <div>
+            <span>Predição</span>
+            <h2>Fraudes previstas pela IA</h2>
+          </div>
+          <strong>{{ data.predictedFraudsByAi }}</strong>
+        </div>
+
+        <div class="progress">
+          <div class="progress-fill" [style.width]="fraudBarWidth"></div>
+        </div>
+
+        <p>{{ data.predictedFraudPercentage | number:'1.2-2' }}% de fraude prevista</p>
+      </article>
+
+      <article class="panel">
+        <span>Dataset</span>
+        <h2>Fraudes reais</h2>
+        <strong>{{ data.realFraudsFromDataset }}</strong>
+        <p>Fraudes marcadas no CSV original.</p>
+      </article>
+    </div>
+
+    <section class="filters">
+      <div>
+        <label>Fraude prevista</label>
+        <select [(ngModel)]="filters.predictedFraud">
+          <option value="">Todos</option>
+          <option value="true">Sim</option>
+          <option value="false">Não</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Fraude real</label>
+        <select [(ngModel)]="filters.realFraud">
+          <option value="">Todos</option>
+          <option value="true">Sim</option>
+          <option value="false">Não</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Probabilidade mínima</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          max="1"
+          placeholder="Ex: 0.80"
+          [(ngModel)]="filters.minProbability"
+        />
+      </div>
+
+      <button type="button" (click)="applyFilters()">Filtrar</button>
+      <button type="button" class="secondary" (click)="clearFilters()">Limpar</button>
+    </section>
+
+    <section class="table-section">
+      <div class="table-header">
+        <h2>Resultados processados</h2>
+        <span>{{ totalElements }} registros</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Transaction ID</th>
+              <th>Fraude real</th>
+              <th>Fraude IA</th>
+              <th>Probabilidade</th>
+              <th>Classificação</th>
+              <th>Processado em</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let result of results">
+              <td>{{ result.transactionId }}</td>
+
+              <td>
+                <span class="badge" [class.danger]="result.realFraud">
+                  {{ result.realFraud ? 'Sim' : 'Não' }}
+                </span>
+              </td>
+
+              <td>
+                <span class="badge" [class.danger]="result.predictedFraud">
+                  {{ result.predictedFraud ? 'Sim' : 'Não' }}
+                </span>
+              </td>
+
+              <td>{{ result.probability | number:'1.2-4' }}</td>
+              <td>{{ result.classification }}</td>
+              <td>{{ result.processedAt | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+            </tr>
+
+            <tr *ngIf="results.length === 0">
+              <td colspan="6" class="empty">
+                Nenhum resultado encontrado.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination" *ngIf="totalElements > 0">
+        <button
+          type="button"
+          class="secondary"
+          (click)="previousPage()"
+          [disabled]="currentPage === 0"
+        >
+          Anterior
+        </button>
+
+        <span>
+          Página {{ currentPage + 1 }} de {{ totalPages }}
+          — {{ totalElements }} registros
+        </span>
+
+        <button
+          type="button"
+          class="secondary"
+          (click)="nextPage()"
+          [disabled]="currentPage + 1 >= totalPages"
+        >
+          Próxima
+        </button>
+      </div>
+    </section>
+  </section>
+</main>
