@@ -10,6 +10,13 @@ TCC (UNIP) de detecção de fraude em sinistros de seguro automotivo. Três mód
 - `ml-fraud-py/` — consumidor Python que aplica um RandomForest (scikit-learn) às transações.
 - `fraud-dashboard/` — frontend Angular 17 (standalone) que consome a API.
 
+## Versionamento e branches
+
+- Remoto: `origin` = github.com/MizeraviDoSertao/TCC_UNIP. Branches: `main` (estável) e `homolog` (homologação, espelho de `main` + alterações em teste).
+- Todo trabalho é feito e commitado na `homolog`. Ao terminar cada alteração, prepare o commit (mensagem em pt-BR) na `homolog`.
+- **Antes de qualquer `git push`, pergunte ao usuário**: (1) se já pode subir as alterações para `origin/homolog` e (2) se ele também quer que elas vão para a `main`. Só faça o merge/push na `main` com um "sim" explícito para a segunda pergunta.
+- `plano-completo-ate-12-11.md` é um arquivo local de planejamento e **não deve ser versionado** em nenhuma branch (está em `.git/info/exclude`).
+
 ## Comandos
 
 Infra (Postgres 16 em 5432, Kafka KRaft em 9092) — na raiz:
