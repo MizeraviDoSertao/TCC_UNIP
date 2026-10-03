@@ -3,15 +3,29 @@ spring:
     name: fraud-api
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/fraud_db
-    username: postgres
-    password: postgres
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/fraud_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: validate
+    show-sql: ${JPA_SHOW_SQL:false}
+    open-in-view: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: always
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: fraud-api
       auto-offset-reset: earliest
@@ -22,8 +36,18 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
-dataset:
-  folder-path: ${DATASET_PATH:/Users/pablo/Documents/java-projects/unip-tcc}
+imports:
+  storage-path: ${IMPORT_STORAGE_PATH:${java.io.tmpdir}/fraud-imports}
+  max-file-size: ${IMPORT_MAX_FILE_SIZE:52428800}
+  target-aliases: ${IMPORT_TARGET_ALIASES:fraudfound_p,fraud,is_fraud,fraude,isfraud,label}
+
+outbox:
+  publish-delay-ms: ${OUTBOX_PUBLISH_DELAY_MS:1000}
+
+fraud:
+  kafka:
+    transactions-topic: ${KAFKA_TRANSACTIONS_TOPIC:transactions}
+    results-topic: ${KAFKA_RESULTS_TOPIC:fraud-results}
 
 server:
   servlet:

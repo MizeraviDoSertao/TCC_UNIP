@@ -1,9 +1,13 @@
 export interface DashboardSummary {
-  totalBronze: number;
-  totalSilver: number;
-  totalGold: number;
-  totalRejected: number;
-  realFraudsFromDataset: number;
-  predictedFraudsByAi: number;
-  predictedFraudPercentage: number;
+  readonly totalBronze: number;
+  readonly totalSilver: number;
+  readonly totalGold: number;
+  readonly totalRejected: number;
+  readonly realFraudsFromDataset: number;
+  readonly predictedFraudsByAi: number;
+  readonly predictedFraudPercentage: number;
+  readonly lowRisk: number;
+  readonly mediumRisk: number;
+  readonly highRisk: number;
+  readonly pendingReview: number;
 }

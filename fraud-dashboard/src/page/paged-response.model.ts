@@ -1,7 +1,7 @@
 export interface PagedResponse<T> {
-  content: T[];
-  page: number;
-  size: number;
-  totalElements: number;
-  totalPages: number;
+  readonly content: readonly T[];
+  readonly page: number;
+  readonly size: number;
+  readonly totalElements: number;
+  readonly totalPages: number;
 }

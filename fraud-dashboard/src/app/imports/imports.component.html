@@ -1,0 +1,101 @@
+<main class="page-shell">
+  <section class="page-hero">
+    <div>
+      <p class="eyebrow">Entrada do pipeline</p>
+      <h1>Importações</h1>
+      <p class="hero-copy">Envie CSV, XLS ou XLSX e acompanhe o processamento do Spring Batch até as camadas Silver e Gold.</p>
+    </div>
+  </section>
+
+  <section class="upload-card">
+    <div class="upload-copy">
+      <span class="upload-icon" aria-hidden="true">↑</span>
+      <div>
+        <h2>Novo dataset</h2>
+        <p>As colunas são detectadas automaticamente. Limite configurado pelo backend: 50 MB.</p>
+      </div>
+    </div>
+    <div class="file-actions">
+      <label class="file-picker">
+        <input #fileInput type="file" accept=".csv,.xls,.xlsx" (change)="chooseFile($event)">
+        <span>{{ selectedFile ? 'Trocar arquivo' : 'Selecionar arquivo' }}</span>
+      </label>
+      <button type="button" class="button" (click)="upload()" [disabled]="!selectedFile || uploading">
+        {{ uploading ? 'Enviando…' : 'Iniciar importação' }}
+      </button>
+    </div>
+    <div *ngIf="selectedFile" class="selected-file">
+      <strong>{{ selectedFile.name }}</strong><span>{{ fileSize(selectedFile) }}</span>
+    </div>
+  </section>
+
+  <div *ngIf="uploadError" class="alert error" role="alert">{{ uploadError }}</div>
+  <div *ngIf="loadError" class="alert error" role="alert">Não foi possível carregar o histórico de importações.</div>
+
+  <section class="imports-layout">
+    <article class="panel history-panel">
+      <div class="section-heading">
+        <div><p class="eyebrow">Histórico</p><h2>Processamentos recentes</h2></div>
+        <span>Atualização automática</span>
+      </div>
+
+      <div *ngIf="loading" class="empty">Carregando importações…</div>
+      <button
+        *ngFor="let job of imports"
+        type="button"
+        class="import-row"
+        [class.selected]="selectedImport?.importId === job.importId"
+        (click)="selectImport(job)"
+      >
+        <span class="file-type">{{ job.fileName.split('.').pop()?.toUpperCase() }}</span>
+        <span class="import-main">
+          <strong>{{ job.fileName }}</strong>
+          <small>{{ job.createdAt | date:'dd/MM/yyyy HH:mm' }} · {{ job.totalRows | number }} linhas</small>
+          <span class="progress"><i [style.width.%]="progress(job)"></i></span>
+        </span>
+        <span class="status" [attr.data-status]="job.status">{{ statusLabel(job.status) }}</span>
+      </button>
+      <p *ngIf="!loading && imports.length === 0" class="empty">Nenhuma importação foi enviada ainda.</p>
+    </article>
+
+    <aside class="panel detail-panel" *ngIf="selectedImport as job; else detailHint">
+      <p class="eyebrow">Detalhes da execução</p>
+      <h2>{{ job.fileName }}</h2>
+      <span class="status large" [attr.data-status]="job.status">{{ statusLabel(job.status) }}</span>
+
+      <div class="numbers">
+        <div><strong>{{ job.totalRows }}</strong><span>Total</span></div>
+        <div><strong>{{ job.processedRows }}</strong><span>Processadas</span></div>
+        <div><strong>{{ job.rejectedRows }}</strong><span>Rejeitadas</span></div>
+      </div>
+
+      <dl>
+        <div><dt>Identificador</dt><dd>{{ job.importId }}</dd></div>
+        <div><dt>Início</dt><dd>{{ job.startedAt ? (job.startedAt | date:'dd/MM/yyyy HH:mm:ss') : 'Aguardando' }}</dd></div>
+        <div><dt>Conclusão</dt><dd>{{ job.finishedAt ? (job.finishedAt | date:'dd/MM/yyyy HH:mm:ss') : '—' }}</dd></div>
+      </dl>
+
+      <div *ngIf="job.errorMessage" class="alert error">{{ job.errorMessage }}</div>
+
+      <div class="detail-actions">
+        <a class="button" [routerLink]="['/claims']" [queryParams]="{ importId: job.importId }">Explorar dados</a>
+        <button *ngIf="job.status === 'FAILED'" type="button" class="button danger" (click)="retry(job)">Tentar novamente</button>
+      </div>
+
+      <section *ngIf="errors.length > 0" class="rejections">
+        <h3>Primeiras rejeições</h3>
+        <div *ngFor="let error of errors">
+          <strong>Linha {{ error.rowNumber }} · {{ error.errorReason }}</strong>
+          <small>{{ errorPreview(error) }}</small>
+        </div>
+      </section>
+    </aside>
+
+    <ng-template #detailHint>
+      <aside class="panel detail-panel hint">
+        <span>☷</span><h2>Selecione uma importação</h2>
+        <p>Você verá progresso, quantidades, erros e acesso aos dados processados.</p>
+      </aside>
+    </ng-template>
+  </section>
+</main>

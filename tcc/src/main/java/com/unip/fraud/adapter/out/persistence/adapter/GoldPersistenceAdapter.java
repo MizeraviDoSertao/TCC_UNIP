@@ -1,38 +1,39 @@
 package com.unip.fraud.adapter.out.persistence.adapter;
 
-import com.unip.fraud.adapter.out.persistence.entity.GoldFraudResultEntity;
+import com.unip.fraud.adapter.out.persistence.mapper.GoldEntityMapper;
 import com.unip.fraud.adapter.out.persistence.repository.GoldFraudResultRepository;
+import com.unip.fraud.adapter.out.persistence.specification.FraudResultSpecificationFactory;
 import com.unip.fraud.application.domain.FraudResult;
 import com.unip.fraud.application.domain.FraudResultFilter;
+import com.unip.fraud.application.domain.PageResponse;
 import com.unip.fraud.application.port.out.repository.GoldRepositoryOutPort;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
+
+import java.util.Optional;
 
 @Component
 public class GoldPersistenceAdapter implements GoldRepositoryOutPort {
 
   private final GoldFraudResultRepository goldFraudResultRepository;
+  private final GoldEntityMapper mapper;
+  private final FraudResultSpecificationFactory specificationFactory;
 
   public GoldPersistenceAdapter(
-      final GoldFraudResultRepository goldFraudResultRepository) {
+      final GoldFraudResultRepository goldFraudResultRepository,
+      final GoldEntityMapper mapper,
+      final FraudResultSpecificationFactory specificationFactory) {
     this.goldFraudResultRepository = goldFraudResultRepository;
+    this.mapper = mapper;
+    this.specificationFactory = specificationFactory;
   }
 
   @Override
   public void save(final FraudResult result) {
-    final GoldFraudResultEntity entity = new GoldFraudResultEntity();
-    entity.setTransactionId(result.transactionId());
-    entity.setRealFraud(result.realFraud());
-    entity.setPredictedFraud(result.predictedFraud());
-    entity.setProbability(result.probability());
-    entity.setClassification(result.classification());
-    entity.setProcessedAt(result.processedAt());
-    goldFraudResultRepository.save(entity);
-
+    goldFraudResultRepository.save(mapper.toEntity(result));
   }
 
   @Override
@@ -51,99 +52,50 @@ public class GoldPersistenceAdapter implements GoldRepositoryOutPort {
   }
 
   @Override
-  public Page<FraudResult> findByFilter(FraudResultFilter filter, int page, int size) {
-    final Specification<GoldFraudResultEntity> specification =
-        buildSpecification(filter);
+  public long countByRiskLevel(final String riskLevel) {
+    return goldFraudResultRepository.countByRiskLevel(riskLevel);
+  }
 
+  @Override
+  public long countPendingReview() {
+    return goldFraudResultRepository.countByPredictedFraudIsNull();
+  }
+
+  @Override
+  public PageResponse<FraudResult> findByFilter(
+      final FraudResultFilter filter,
+      final int page,
+      final int size) {
     final Pageable pageable = PageRequest.of(
         page,
         size,
         Sort.by(Sort.Direction.DESC, "processedAt"));
 
-    return goldFraudResultRepository.findAll(specification, pageable).map(this::toDomain);
-  }
-
-  private Specification<GoldFraudResultEntity> buildSpecification(
-      FraudResultFilter filter
-  ) {
-    Specification<GoldFraudResultEntity> specification = null;
-
-    if (filter.predictedFraud() != null) {
-      specification = addSpecification(
-          specification,
-          (root, query, criteriaBuilder) ->
-              criteriaBuilder.equal(
-                  root.get("predictedFraud"),
-                  filter.predictedFraud()
-              )
-      );
-    }
-
-    if (filter.realFraud() != null) {
-      specification = addSpecification(
-          specification,
-          (root, query, criteriaBuilder) ->
-              criteriaBuilder.equal(
-                  root.get("realFraud"),
-                  filter.realFraud()
-              )
-      );
-    }
-
-    if (filter.minProbability() != null) {
-      specification = addSpecification(
-          specification,
-          (root, query, criteriaBuilder) ->
-              criteriaBuilder.greaterThanOrEqualTo(
-                  root.get("probability"),
-                  filter.minProbability()
-              )
-      );
-    }
-
-    if (filter.startDate() != null) {
-      specification = addSpecification(
-          specification,
-          (root, query, criteriaBuilder) ->
-              criteriaBuilder.greaterThanOrEqualTo(
-                  root.get("processedAt"),
-                  filter.startDate()
-              )
-      );
-    }
-
-    if (filter.endDate() != null) {
-      specification = addSpecification(
-          specification,
-          (root, query, criteriaBuilder) ->
-              criteriaBuilder.lessThanOrEqualTo(
-                  root.get("processedAt"),
-                  filter.endDate()
-              )
-      );
-    }
-
-    return specification;
-  }
-
-  private Specification<GoldFraudResultEntity> addSpecification(
-      Specification<GoldFraudResultEntity> specification,
-      Specification<GoldFraudResultEntity> newSpec
-  ) {
-    if (specification == null) {
-      return newSpec;
-    }
-    return specification.and(newSpec);
-  }
-
-  private FraudResult toDomain(GoldFraudResultEntity entity) {
-    return new FraudResult(
-        entity.getTransactionId(),
-        entity.getRealFraud(),
-        entity.getPredictedFraud(),
-        entity.getProbability(),
-        entity.getClassification(),
-        entity.getProcessedAt()
+    final Page<FraudResult> result = goldFraudResultRepository.findAll(
+        specificationFactory.create(filter),
+        pageable
+    ).map(mapper::toDomain);
+    return new PageResponse<>(
+        result.getContent(),
+        result.getNumber(),
+        result.getSize(),
+        result.getTotalElements(),
+        result.getTotalPages()
     );
+  }
+
+  @Override
+  public Optional<FraudResult> findByTransactionId(final String transactionId) {
+    return goldFraudResultRepository.findById(transactionId).map(mapper::toDomain);
+  }
+
+  @Override
+  public void updateConfirmedFraud(
+      final String transactionId,
+      final Boolean confirmedFraud) {
+    goldFraudResultRepository.findById(transactionId).ifPresent(entity -> {
+      entity.confirmFraud(confirmedFraud);
+      goldFraudResultRepository.save(entity);
+    });
   }
 }

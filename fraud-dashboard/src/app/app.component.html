@@ -1,177 +1,196 @@
-<main class="page">
-  <section class="hero">
+<main class="page-shell">
+  <section class="page-hero">
     <div>
-      <p class="eyebrow">Fraud Detection MVP</p>
-      <h1>Fraud Detection Dashboard</h1>
-      <p>Monitoramento do pipeline Bronze, Silver e Gold com Kafka, Python IA e Spring Boot.</p>
+      <p class="eyebrow">Centro de decisão</p>
+      <h1>Visão geral de fraude</h1>
+      <p class="hero-copy">
+        Acompanhe a qualidade dos dados, o risco calculado pela IA e o que ainda precisa de revisão.
+      </p>
     </div>
 
-    <div class="actions">
-      <span class="status">{{ status }}</span>
-      <button type="button" (click)="refresh()">Atualizar</button>
+    <div class="hero-actions">
+      <span class="health" [class.warning]="(summary?.totalRejected ?? 0) > 0" [class.error]="summaryError">
+        <i aria-hidden="true"></i>{{ status }}
+      </span>
+      <button type="button" class="button secondary" (click)="refresh()" [disabled]="loadingSummary">
+        {{ loadingSummary ? 'Atualizando…' : 'Atualizar dados' }}
+      </button>
+      <small *ngIf="lastUpdated">Atualizado {{ lastUpdated | date:'HH:mm:ss' }}</small>
     </div>
   </section>
 
-  <section *ngIf="summary as data" class="content">
-    <div class="cards">
-      <article class="card bronze">
-        <span>Bronze</span>
-        <strong>{{ data.totalBronze }}</strong>
-        <small>Dados brutos</small>
-      </article>
+  <div *ngIf="summaryError" class="alert error" role="alert">
+    Não foi possível atualizar os indicadores. Confirme se o backend Java está disponível.
+  </div>
 
-      <article class="card silver">
-        <span>Silver</span>
-        <strong>{{ data.totalSilver }}</strong>
-        <small>Dados tratados</small>
-      </article>
+  <section class="metric-grid" aria-label="Indicadores da arquitetura medalhão">
+    <article *ngFor="let metric of metrics" class="metric-card" [attr.data-tone]="metric.tone">
+      <div class="metric-heading">
+        <span>{{ metric.label }}</span>
+        <i aria-hidden="true"></i>
+      </div>
+      <strong>{{ metric.value | number }}</strong>
+      <small>{{ metric.helper }}</small>
+    </article>
+  </section>
 
-      <article class="card gold">
-        <span>Gold</span>
-        <strong>{{ data.totalGold }}</strong>
-        <small>Resultados IA</small>
-      </article>
-
-      <article class="card rejected">
-        <span>Rejected</span>
-        <strong>{{ data.totalRejected }}</strong>
-        <small>Registros rejeitados</small>
-      </article>
-    </div>
-
-    <div class="panels">
-      <article class="panel wide">
-        <div class="panel-header">
-          <div>
-            <span>Predição</span>
-            <h2>Fraudes previstas pela IA</h2>
-          </div>
-          <strong>{{ data.predictedFraudsByAi }}</strong>
+  <section class="insight-grid" *ngIf="summary as data">
+    <article class="panel prediction-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Modelo de IA</p>
+          <h2>Taxa de alertas de fraude</h2>
         </div>
+        <span class="big-number">{{ data.predictedFraudPercentage | number:'1.1-1' }}%</span>
+      </div>
 
-        <div class="progress">
-          <div class="progress-fill" [style.width]="fraudBarWidth"></div>
+      <div class="prediction-track" aria-label="Percentual previsto como fraude">
+        <span [style.width.%]="data.predictedFraudPercentage"></span>
+      </div>
+
+      <div class="prediction-stats">
+        <span><strong>{{ data.predictedFraudsByAi }}</strong> alertas da IA</span>
+        <span><strong>{{ data.realFraudsFromDataset }}</strong> fraudes confirmadas</span>
+        <span><strong>{{ data.pendingReview }}</strong> pendentes de revisão</span>
+      </div>
+    </article>
+
+    <article class="panel risk-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Distribuição</p>
+          <h2>Faixas de risco</h2>
         </div>
-
-        <p>{{ data.predictedFraudPercentage | number:'1.2-2' }}% de fraude prevista</p>
-      </article>
-
-      <article class="panel">
-        <span>Dataset</span>
-        <h2>Fraudes reais</h2>
-        <strong>{{ data.realFraudsFromDataset }}</strong>
-        <p>Fraudes marcadas no CSV original.</p>
-      </article>
-    </div>
-
-    <section class="filters">
-      <div>
-        <label>Fraude prevista</label>
-        <select [(ngModel)]="filters.predictedFraud">
-          <option value="">Todos</option>
-          <option value="true">Sim</option>
-          <option value="false">Não</option>
-        </select>
+        <span class="total-label">{{ riskTotal }} análises</span>
       </div>
 
-      <div>
-        <label>Fraude real</label>
-        <select [(ngModel)]="filters.realFraud">
-          <option value="">Todos</option>
-          <option value="true">Sim</option>
-          <option value="false">Não</option>
-        </select>
+      <div class="risk-bars">
+        <div>
+          <span><b>Baixo</b><small>{{ data.lowRisk }}</small></span>
+          <div><i class="low" [style.width.%]="riskPercentage(data.lowRisk)"></i></div>
+        </div>
+        <div>
+          <span><b>Médio</b><small>{{ data.mediumRisk }}</small></span>
+          <div><i class="medium" [style.width.%]="riskPercentage(data.mediumRisk)"></i></div>
+        </div>
+        <div>
+          <span><b>Alto</b><small>{{ data.highRisk }}</small></span>
+          <div><i class="high" [style.width.%]="riskPercentage(data.highRisk)"></i></div>
+        </div>
       </div>
+    </article>
+  </section>
 
+  <section class="panel results-panel">
+    <div class="section-heading">
       <div>
-        <label>Probabilidade mínima</label>
-        <input
-          type="number"
-          step="0.01"
-          min="0"
-          max="1"
-          placeholder="Ex: 0.80"
-          [(ngModel)]="filters.minProbability"
-        />
-      </div>
-
-      <button type="button" (click)="applyFilters()">Filtrar</button>
-      <button type="button" class="secondary" (click)="clearFilters()">Limpar</button>
-    </section>
-
-    <section class="table-section">
-      <div class="table-header">
+        <p class="eyebrow">Investigação</p>
         <h2>Resultados processados</h2>
-        <span>{{ totalElements }} registros</span>
+        <p>Combine os filtros para encontrar análises específicas.</p>
       </div>
+      <span class="record-count">{{ totalElements | number }} registros</span>
+    </div>
 
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Transaction ID</th>
-              <th>Fraude real</th>
-              <th>Fraude IA</th>
-              <th>Probabilidade</th>
-              <th>Classificação</th>
-              <th>Processado em</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr *ngFor="let result of results">
-              <td>{{ result.transactionId }}</td>
-
-              <td>
-                <span class="badge" [class.danger]="result.realFraud">
-                  {{ result.realFraud ? 'Sim' : 'Não' }}
-                </span>
-              </td>
-
-              <td>
-                <span class="badge" [class.danger]="result.predictedFraud">
-                  {{ result.predictedFraud ? 'Sim' : 'Não' }}
-                </span>
-              </td>
-
-              <td>{{ result.probability | number:'1.2-4' }}</td>
-              <td>{{ result.classification }}</td>
-              <td>{{ result.processedAt | date:'dd/MM/yyyy HH:mm:ss' }}</td>
-            </tr>
-
-            <tr *ngIf="results.length === 0">
-              <td colspan="6" class="empty">
-                Nenhum resultado encontrado.
-              </td>
-            </tr>
-          </tbody>
-        </table>
+    <form class="filters" [formGroup]="filterForm" (ngSubmit)="applyFilters()">
+      <label>
+        <span>Decisão da IA</span>
+        <select formControlName="predictedFraud">
+          <option value="">Todas</option>
+          <option value="true">Fraude</option>
+          <option value="false">Legítima</option>
+        </select>
+      </label>
+      <label>
+        <span>Fraude confirmada</span>
+        <select formControlName="realFraud">
+          <option value="">Todas</option>
+          <option value="true">Sim</option>
+          <option value="false">Não</option>
+        </select>
+      </label>
+      <label>
+        <span>Risco</span>
+        <select formControlName="riskLevel">
+          <option value="">Todos</option>
+          <option value="LOW">Baixo</option>
+          <option value="MEDIUM">Médio</option>
+          <option value="HIGH">Alto</option>
+        </select>
+      </label>
+      <label>
+        <span>Score mínimo (%)</span>
+        <input type="number" formControlName="minProbability" min="0" max="100" step="1" placeholder="Ex.: 70">
+      </label>
+      <label>
+        <span>Versão do modelo</span>
+        <input type="search" formControlName="modelVersion" placeholder="Ex.: anomaly-1">
+      </label>
+      <label>
+        <span>Processado a partir de</span>
+        <input type="datetime-local" formControlName="startDate">
+      </label>
+      <label>
+        <span>Processado até</span>
+        <input type="datetime-local" formControlName="endDate">
+      </label>
+      <div class="filter-actions">
+        <button type="submit" class="button">Aplicar filtros</button>
+        <button type="button" class="button ghost" (click)="clearFilters()">Limpar</button>
       </div>
+    </form>
 
-      <div class="pagination" *ngIf="totalElements > 0">
-        <button
-          type="button"
-          class="secondary"
-          (click)="previousPage()"
-          [disabled]="currentPage === 0"
-        >
-          Anterior
-        </button>
+    <div *ngIf="resultsError" class="alert error" role="alert">
+      Não foi possível carregar os resultados. Tente novamente.
+    </div>
 
-        <span>
-          Página {{ currentPage + 1 }} de {{ totalPages }}
-          — {{ totalElements }} registros
-        </span>
+    <div class="table-state" *ngIf="loadingResults">
+      <span class="spinner" aria-hidden="true"></span> Carregando análises…
+    </div>
 
-        <button
-          type="button"
-          class="secondary"
-          (click)="nextPage()"
-          [disabled]="currentPage + 1 >= totalPages"
-        >
-          Próxima
-        </button>
-      </div>
-    </section>
+    <div class="table-wrapper" *ngIf="!loadingResults && !resultsError">
+      <table>
+        <thead>
+          <tr>
+            <th>Sinistro</th>
+            <th>Risco</th>
+            <th>Score</th>
+            <th>IA</th>
+            <th>Confirmado</th>
+            <th>Modelo</th>
+            <th>Processamento</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let result of results">
+            <td>
+              <a class="transaction-link" [routerLink]="['/transactions', result.transactionId]">
+                <span>{{ result.transactionId }}</span>
+                <small>Ver todos os dados →</small>
+              </a>
+            </td>
+            <td><span class="risk-badge" [attr.data-risk]="result.riskLevel">{{ riskLabel(result.riskLevel) }}</span></td>
+            <td>
+              <div class="score-cell">
+                <strong>{{ probability(result) | number:'1.0-1' }}%</strong>
+                <span><i [style.width.%]="probability(result)"></i></span>
+              </div>
+            </td>
+            <td><span class="decision-badge" [class.negative]="result.predictedFraud === true">{{ booleanLabel(result.predictedFraud) }}</span></td>
+            <td><span class="decision-badge neutral" [class.negative]="result.realFraud === true">{{ booleanLabel(result.realFraud) }}</span></td>
+            <td>{{ result.modelVersion || '—' }}</td>
+            <td>{{ result.processedAt | date:'dd/MM/yyyy HH:mm' }}</td>
+          </tr>
+          <tr *ngIf="results.length === 0">
+            <td colspan="7" class="empty-state">Nenhum resultado corresponde aos filtros selecionados.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <nav class="pagination" *ngIf="totalPages > 1" aria-label="Paginação dos resultados">
+      <button type="button" class="button ghost" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0">Anterior</button>
+      <span>Página <strong>{{ currentPage + 1 }}</strong> de {{ totalPages }}</span>
+      <button type="button" class="button ghost" (click)="goToPage(currentPage + 1)" [disabled]="currentPage + 1 >= totalPages">Próxima</button>
+    </nav>
   </section>
 </main>

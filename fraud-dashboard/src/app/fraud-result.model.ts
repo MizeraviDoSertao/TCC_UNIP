@@ -1,8 +1,13 @@
 export interface FraudResult {
-  transactionId: string;
-  realFraud: boolean;
-  predictedFraud: boolean;
-  probability: number;
-  classification: string;
-  processedAt: string;
+  readonly transactionId: string;
+  readonly realFraud: boolean | null;
+  readonly predictedFraud: boolean | null;
+  readonly probability: number;
+  readonly scoreType: string;
+  readonly riskLevel: string;
+  readonly threshold: number | null;
+  readonly classification: string;
+  readonly modelVersion: string | null;
+  readonly reasons: readonly string[];
+  readonly processedAt: string;
 }

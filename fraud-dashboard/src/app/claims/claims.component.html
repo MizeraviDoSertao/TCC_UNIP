@@ -1,0 +1,124 @@
+<main class="page-shell">
+  <section class="page-hero">
+    <div>
+      <p class="eyebrow">Camada Silver</p>
+      <h1>Explorar sinistros</h1>
+      <p class="hero-copy">
+        Consulte linhas normalizadas e filtre por qualquer coluna descoberta no arquivo, mesmo que ela seja nova.
+      </p>
+    </div>
+    <span class="counter">{{ totalElements | number }} sinistros</span>
+  </section>
+
+  <section class="panel filter-panel">
+    <form [formGroup]="filterForm" (ngSubmit)="applyFilters()">
+      <label class="wide">
+        <span>Buscar em todos os dados</span>
+        <input type="search" formControlName="search" placeholder="ID, arquivo ou valor presente na linha">
+      </label>
+      <label>
+        <span>Importação</span>
+        <select formControlName="importId">
+          <option value="">Todas as importações</option>
+          <option *ngFor="let item of imports" [value]="item.importId">{{ item.fileName }} · {{ item.createdAt | date:'dd/MM HH:mm' }}</option>
+        </select>
+      </label>
+      <label>
+        <span>Coluna dinâmica</span>
+        <select formControlName="field">
+          <option value="">Selecione uma coluna</option>
+          <option *ngFor="let column of schema" [value]="column.name">{{ column.originalName }} ({{ column.type }})</option>
+        </select>
+      </label>
+      <label>
+        <span>Valor da coluna</span>
+        <input type="search" formControlName="value" placeholder="Valor exato ou parcial">
+      </label>
+      <div class="actions">
+        <button type="submit" class="button">Buscar</button>
+        <button type="button" class="button ghost" (click)="clearFilters()">Limpar</button>
+      </div>
+    </form>
+    <p class="schema-hint" *ngIf="filterForm.controls.importId.value && schema.length > 0">
+      {{ schema.length }} colunas detectadas automaticamente nessa importação.
+    </p>
+  </section>
+
+  <div *ngIf="loadError" class="alert error" role="alert">Não foi possível consultar os sinistros.</div>
+  <div *ngIf="loading" class="loading-state"><span></span>Carregando dados normalizados…</div>
+
+  <section class="claims-layout" *ngIf="!loading && !loadError">
+    <article class="panel list-panel">
+      <div class="list-heading">
+        <div>
+          <p class="eyebrow">Resultado da consulta</p>
+          <h2>Linhas disponíveis</h2>
+        </div>
+        <small>Clique em uma linha para inspecionar</small>
+      </div>
+
+      <button
+        *ngFor="let claim of claims"
+        type="button"
+        class="claim-row"
+        [class.selected]="selectedClaim?.transactionId === claim.transactionId"
+        (click)="selectClaim(claim)"
+      >
+        <span class="row-index">#{{ claim.rowNumber }}</span>
+        <span class="row-main">
+          <strong>{{ claim.transactionId }}</strong>
+          <small>{{ preview(claim) || 'Linha sem atributos adicionais' }}</small>
+        </span>
+        <span class="fraud-state" [class.fraud]="claim.confirmedFraud === true" [class.unknown]="claim.confirmedFraud === null">
+          {{ fraudLabel(claim.confirmedFraud) }}
+        </span>
+      </button>
+
+      <p *ngIf="claims.length === 0" class="empty">Nenhuma linha encontrada para estes filtros.</p>
+
+      <nav class="pagination" *ngIf="totalPages > 1" aria-label="Paginação dos sinistros">
+        <button type="button" class="button ghost" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0">Anterior</button>
+        <span>{{ currentPage + 1 }} / {{ totalPages }}</span>
+        <button type="button" class="button ghost" (click)="goToPage(currentPage + 1)" [disabled]="currentPage + 1 >= totalPages">Próxima</button>
+      </nav>
+    </article>
+
+    <aside class="panel detail-panel" *ngIf="selectedClaim as claim; else selectHint">
+      <div class="detail-heading">
+        <div>
+          <p class="eyebrow">Linha {{ claim.rowNumber }}</p>
+          <h2>Dados do sinistro</h2>
+        </div>
+        <button type="button" class="close" (click)="closeDetail()" aria-label="Fechar detalhes">×</button>
+      </div>
+
+      <dl>
+        <div><dt>Arquivo</dt><dd>{{ claim.sourceFile }}</dd></div>
+        <div><dt>ID</dt><dd>{{ claim.transactionId }}</dd></div>
+        <div><dt>Rótulo confirmado</dt><dd>{{ fraudLabel(claim.confirmedFraud) }}</dd></div>
+      </dl>
+
+      <label class="attribute-search">
+        <span>Filtrar atributos desta linha</span>
+        <input type="search" [formControl]="detailFilter" placeholder="Nome ou valor">
+      </label>
+
+      <div class="attribute-list">
+        <div *ngFor="let feature of selectedEntries">
+          <span>{{ formatLabel(feature[0]) }}</span>
+          <strong>{{ formatValue(feature[1]) }}</strong>
+        </div>
+      </div>
+
+      <a class="button detail-link" [routerLink]="['/transactions', claim.transactionId]">Abrir análise da IA</a>
+    </aside>
+
+    <ng-template #selectHint>
+      <aside class="panel detail-panel hint">
+        <span class="hint-icon">↗</span>
+        <h2>Selecione um sinistro</h2>
+        <p>Os campos do Excel aparecerão aqui de forma organizada, independentemente do nome ou da quantidade de colunas.</p>
+      </aside>
+    </ng-template>
+  </section>
+</main>

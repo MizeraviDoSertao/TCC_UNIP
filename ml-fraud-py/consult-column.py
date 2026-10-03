@@ -1,6 +1,6 @@
-import pandas as pd
+import sys
 
-df = pd.read_csv("/Users/pablo/Documents/java-projects/unip-tcc/fraud_oracle.csv")
+from fraud_detection.cli import main
 
-print(df.columns.tolist())
-print(df.head())
+if __name__ == "__main__":
+  raise SystemExit(main(["inspect", *sys.argv[1:]]))

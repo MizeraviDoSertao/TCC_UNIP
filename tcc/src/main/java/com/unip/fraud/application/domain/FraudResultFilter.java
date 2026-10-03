@@ -7,6 +7,8 @@ public record FraudResultFilter(
     Boolean realFraud,
     Double minProbability,
     LocalDateTime startDate,
-    LocalDateTime endDate
+    LocalDateTime endDate,
+    String riskLevel,
+    String modelVersion
 ) {
 }

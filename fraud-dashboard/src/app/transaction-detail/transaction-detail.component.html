@@ -1,0 +1,86 @@
+<main class="page-shell">
+  <a class="back-link" routerLink="/">← Voltar aos resultados</a>
+
+  <section *ngIf="loading" class="panel state-card" aria-live="polite">
+    <span class="loader" aria-hidden="true"></span>
+    <div><h1>Carregando análise</h1><p>Consolidando os dados das camadas Silver e Gold.</p></div>
+  </section>
+
+  <section *ngIf="notFound" class="panel state-card" role="alert">
+    <span class="state-icon" aria-hidden="true">!</span>
+    <div><h1>Análise não encontrada</h1><p>Este sinistro ainda não foi processado pela IA ou não existe.</p></div>
+  </section>
+
+  <ng-container *ngIf="transaction as data">
+    <section class="detail-hero">
+      <div>
+        <p class="eyebrow">Análise individual</p>
+        <h1>{{ data.transactionId }}</h1>
+        <p>Resultado rastreável da importação, normalização e inferência do modelo.</p>
+      </div>
+      <div class="decision-block">
+        <span class="risk" [attr.data-risk]="data.riskLevel">Risco {{ riskLabel(data.riskLevel) }}</span>
+        <strong [class.fraud]="data.predictedFraud === true">{{ fraudLabel(data.predictedFraud) }}</strong>
+      </div>
+    </section>
+
+    <section class="summary-grid">
+      <article class="panel score-card">
+        <span>Score do modelo</span>
+        <strong>{{ probabilityPercentage | number:'1.1-1' }}%</strong>
+        <div class="score-track"><i [style.width.%]="probabilityPercentage"></i></div>
+        <small>Limite: {{ data.threshold === null ? 'não informado' : ((data.threshold * 100) | number:'1.0-1') + '%' }}</small>
+      </article>
+      <article class="panel mini-card">
+        <span>Rótulo confirmado</span>
+        <strong [class.fraud]="data.realFraud === true">{{ fraudLabel(data.realFraud) }}</strong>
+        <small *ngIf="data.realFraud === null">Dataset sem coluna de fraude ou aguardando revisão.</small>
+        <small *ngIf="data.realFraud !== null">Informação supervisionada ou revisão humana.</small>
+      </article>
+      <article class="panel mini-card">
+        <span>Modelo</span>
+        <strong>{{ data.modelVersion || 'Não informado' }}</strong>
+        <small>{{ data.scoreType }} · {{ data.classification }}</small>
+      </article>
+    </section>
+
+    <section class="content-grid">
+      <article class="panel metadata-panel">
+        <p class="eyebrow">Rastreabilidade</p>
+        <h2>Processamento</h2>
+        <dl>
+          <div><dt>Arquivo de origem</dt><dd>{{ data.sourceFile || 'Não informado' }}</dd></div>
+          <div><dt>Entrada na Silver</dt><dd>{{ data.ingestedAt ? (data.ingestedAt | date:'dd/MM/yyyy HH:mm:ss') : 'Não informado' }}</dd></div>
+          <div><dt>Inferência na Gold</dt><dd>{{ data.processedAt | date:'dd/MM/yyyy HH:mm:ss' }}</dd></div>
+          <div><dt>Tipo de score</dt><dd>{{ data.scoreType }}</dd></div>
+        </dl>
+
+        <div class="reasons" *ngIf="data.reasons.length > 0">
+          <h3>Motivos apresentados</h3>
+          <span *ngFor="let reason of data.reasons">{{ reason }}</span>
+        </div>
+      </article>
+
+      <article class="panel features-panel">
+        <div class="features-heading">
+          <div><p class="eyebrow">Dados dinâmicos</p><h2>Informações do sinistro</h2></div>
+          <span>{{ featureEntries.length }} de {{ (data.features | keyvalue).length }} campos</span>
+        </div>
+
+        <label class="search-field">
+          <span>Encontrar um campo ou valor</span>
+          <input type="search" [formControl]="featureSearch" placeholder="Ex.: idade, valor, fabricante…">
+        </label>
+
+        <div class="features-grid" *ngIf="featureEntries.length > 0; else noFeatures">
+          <div *ngFor="let feature of featureEntries" class="feature">
+            <span>{{ featureLabel(feature[0]) }}</span>
+            <strong>{{ featureValue(feature[1]) }}</strong>
+          </div>
+        </div>
+
+        <ng-template #noFeatures><p class="empty">Nenhum atributo corresponde à busca.</p></ng-template>
+      </article>
+    </section>
+  </ng-container>
+</main>

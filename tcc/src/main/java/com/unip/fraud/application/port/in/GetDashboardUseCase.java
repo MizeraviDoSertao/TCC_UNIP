@@ -1,9 +1,9 @@
 package com.unip.fraud.application.port.in;
 
-import java.util.Map;
+import com.unip.fraud.application.domain.DashboardSummary;
 
 public interface GetDashboardUseCase {
 
-  Map<String, Object> getSummary();
+  DashboardSummary getSummary();
 
 }
